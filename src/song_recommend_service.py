@@ -72,7 +72,8 @@ class SongRecommendService:
         if model is None:
             model = self.model
         else:
-            model = json.loads(model)
+            #model = json.loads(model)
+            pass
 
         """Train the model over multiple epochs."""
         # Convert features to PyTorch tensor

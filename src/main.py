@@ -51,7 +51,7 @@ class MusicRecommendationFungus:
                     logging.info("[TRAINING] New fungus group detected, initiating training")
                     model = self.rdf_kg.fetch_model_from_knowledge_base(link_to_model)
                     updates = self.rdf_kg.fetch_updates_from_knowledge_base(link_to_model)
-                    model = self.train_and_deploy_model(model, updates)
+                    model = self.train_and_deploy_model(self.song_recommendation_service.model, updates)
                     # aggregate knowledge from other nodes
                     # TODO: Include again
                     # self.rdf_kg.aggregate_updates_from_other_nodes(link_to_model, model)
@@ -76,12 +76,12 @@ class MusicRecommendationFungus:
             model = self.song_recommendation_service.train(model)
             logging.info("Posting model update to Mastodon.")
             self.mastodon.post_status(f"Model updated: {self.song_recommendation_service.model}")
-            logging.info(f"[RESULT] Model trained successfully. Model: {model.tolist()}")
+            logging.info(f"[RESULT] Model trained successfully. Model: {model}")
 
             self.rdf_kg.save_model(model)
             logging.info("[STORE] Model saved to RDF Knowledge Graph")
 
-            self.mastodon.post_status(f"Training complete. Updated model: {model.tolist()}")
+            self.mastodon.post_status(f"Training complete. Updated model: {model}")
             logging.info("[NOTIFY] Status posted to Mastodon")
             return model
         except Exception as e:
@@ -98,7 +98,8 @@ class MusicRecommendationFungus:
         fresh_statuses = filter(lambda s: s["id"] not in self.mastodon.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
             if "babyfungus" in status['content']:
-                reply = self.song_recommendation_service.get_song_recommendations(status['content'])
+                #reply = self.song_recommendation_service.get_song_recommendations(status['content'])
+                reply = self.song_recommendation_service.get_song_recommendations(1)
                 self.mastodon.reply_to_status(status['id'], status['account']['username'], reply)
                 feedback /= 2
         return feedback
