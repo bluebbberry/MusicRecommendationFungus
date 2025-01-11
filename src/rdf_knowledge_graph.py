@@ -119,9 +119,9 @@ class RDFKnowledgeGraph:
             print(f"Error retrieving data: {response.status_code} - {response.text}")
             return []
 
-    def aggregate_updates_from_other_nodes(self, link_to_model, self_gradients):
+    def aggregate_updates_from_other_nodes(self, link_to_model, model):
         updates = self.fetch_updates_from_knowledge_base(link_to_model)
-        aggregated_updates = [self_gradients]  # Include self gradients with higher weight
+        aggregated_updates = [model]  # Include self gradients with higher weight
 
         # Process and aggregate updates
         for update in updates:

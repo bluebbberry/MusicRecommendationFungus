@@ -4,6 +4,7 @@ import torch.optim as optim
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import json
 
 
 class SongRecommendService:
@@ -67,7 +68,13 @@ class SongRecommendService:
 
         return features_encoded, song_ids
 
-    def train(self):
+    def train(self, model):
+        if model is None:
+            model = self.model
+        else:
+            #model = json.loads(model)
+            pass
+
         """Train the model over multiple epochs."""
         # Convert features to PyTorch tensor
         X = torch.tensor(self.features_encoded.values, dtype=torch.float32)
@@ -78,10 +85,10 @@ class SongRecommendService:
 
         # Train the model for the specified number of epochs
         for epoch in range(self.num_epochs):
-            self.model.train()
+            model.train()
 
             # Forward pass: Compute predicted ratings for all songs
-            outputs = self.model(X).squeeze()
+            outputs = model(X).squeeze()
 
             # Compute the loss
             loss = self.criterion(outputs, target)
@@ -94,6 +101,8 @@ class SongRecommendService:
             # Print the loss every 10 epochs
             if (epoch + 1) % 10 == 0:
                 print(f'Epoch [{epoch + 1}/{self.num_epochs}], Loss: {loss.item():.4f}')
+        self.model = model
+        return self.model
 
     def get_song_recommendations(self, song_id, top_n=5):
         """Recommend the top N songs most similar to a given song."""
@@ -148,15 +157,15 @@ class SongRecommendService:
 # Example usage:
 
 # 1. Initialize the recommendation service
-recommendation_service = SongRecommendService(songs_csv='songs.csv', user_ratings_csv='user_ratings.csv')
+#recommendation_service = SongRecommendService(songs_csv='songs.csv', user_ratings_csv='user_ratings.csv')
 
 # 2. Train the model
-recommendation_service.train()
+#recommendation_service.train()
 
 # 3. Get song recommendations for a specific song
-recommended_songs = recommendation_service.get_song_recommendations(song_id=1, top_n=5)
-print(f"Top 5 recommended songs similar to song 1: {recommended_songs}")
+#recommended_songs = recommendation_service.get_song_recommendations(song_id=1, top_n=5)
+#print(f"Top 5 recommended songs similar to song 1: {recommended_songs}")
 
 # 4. Recommend songs for a user
-user_recommendations = recommendation_service.recommend_songs_for_user(user_id=104, top_n=5)
-print(f"Top 5 recommended songs for user 104: {user_recommendations}")
+#user_recommendations = recommendation_service.recommend_songs_for_user(user_id=104, top_n=5)
+#print(f"Top 5 recommended songs for user 104: {user_recommendations}")
