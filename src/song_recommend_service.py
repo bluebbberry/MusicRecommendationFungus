@@ -4,6 +4,7 @@ import torch.optim as optim
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+import json
 
 
 class SongRecommendService:
@@ -70,6 +71,8 @@ class SongRecommendService:
     def train(self, model):
         if model is None:
             model = self.model
+        else:
+            model = json.loads(model)
 
         """Train the model over multiple epochs."""
         # Convert features to PyTorch tensor
