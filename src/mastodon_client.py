@@ -3,7 +3,6 @@ import requests
 import numpy as np
 import os
 import logging
-from federated_learning import FederatedLearning
 
 logging.basicConfig(level=logging.INFO)
 
@@ -12,7 +11,6 @@ class MastodonClient:
         self.api_token = os.getenv("MASTODON_API_KEY")
         self.instance_url = os.getenv("MASTODON_INSTANCE_URL")
         self.hashtag = os.getenv("NUTRIAL_TAG")
-        self.federated_learning = FederatedLearning(self)
         self.ids_of_replied_statuses = []
 
     def post_status(self, status_text):
@@ -84,14 +82,3 @@ class MastodonClient:
             print("Reply sent successfully!")
         else:
             print(f"Failed to send reply: {response.status_code}")
-
-    def answer_user_feedback(self):
-        statuses = self.fetch_latest_statuses(None)
-        feedback = 1
-        fresh_statuses = filter(lambda s: s["id"] not in self.ids_of_replied_statuses, statuses)
-        for status in fresh_statuses:
-            if "babyfungus" in status['content']:
-                reply = self.federated_learning.generate_reply(status['content'])
-                self.reply_to_status(status['id'], status['account']['username'], reply)
-                feedback /= 2
-        return feedback

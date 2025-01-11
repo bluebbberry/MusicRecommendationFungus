@@ -2,11 +2,12 @@ import time
 import logging
 import os
 from dotenv import load_dotenv
-from federated_learning import FederatedLearning
 from rdf_knowledge_graph import RDFKnowledgeGraph
 from mastodon_client import MastodonClient
 import datetime
 import random
+
+from song_recommend_service import SongRecommendService
 
 # Load environment variables
 load_dotenv()
@@ -26,7 +27,7 @@ class MusicRecommendationFungus:
                                         fuseki_query=os.getenv("FUSEKI_SERVER_QUERY_URL"))
         self.rdf_kg.insert_gradient(2)
         self.rdf_kg.retrieve_all_gradients(None)
-        self.fl = FederatedLearning(self.mastodon)
+        self.song_recommendation_service = SongRecommendService(songs_csv='songs.csv', user_ratings_csv='user_ratings.csv')
         self.feedback_threshold = float(os.getenv("FEEDBACK_THRESHOLD", 0.5))
         logging.info(f"[CONFIG] Feedback threshold set to {self.feedback_threshold}")
 
@@ -50,11 +51,11 @@ class MusicRecommendationFungus:
                     logging.info("[TRAINING] New fungus group detected, initiating training")
                     model = self.rdf_kg.fetch_model_from_knowledge_base(link_to_model)
                     updates = self.rdf_kg.fetch_updates_from_knowledge_base(link_to_model)
-                    gradients = self.train_and_deploy_model(model, updates)
+                    model = self.train_and_deploy_model(model, updates)
                     # aggregate knowledge from other nodes
-                    self.rdf_kg.aggregate_updates_from_other_nodes(link_to_model, gradients)
+                    self.rdf_kg.aggregate_updates_from_other_nodes(link_to_model, model)
 
-                feedback = self.mastodon.answer_user_feedback()
+                feedback = self.answer_user_feedback()
                 logging.info(f"[FEEDBACK] Received feedback: {feedback}")
 
                 switch_team = self.decide_whether_to_switch_team(feedback)
@@ -71,17 +72,17 @@ class MusicRecommendationFungus:
     def train_and_deploy_model(self, model, updates):
         try:
             logging.info("[TRAINING] Starting model training")
-            model, gradients = self.fl.train(model, updates)
+            model = self.song_recommendation_service.train(model)
             logging.info("Posting model update to Mastodon.")
-            self.mastodon.post_status(f"Model updated: {self.fl.model.tolist()}")
+            self.mastodon.post_status(f"Model updated: {self.song_recommendation_service.model}")
             logging.info(f"[RESULT] Model trained successfully. Model: {model.tolist()}")
 
-            self.rdf_kg.save_model(gradients)
+            self.rdf_kg.save_model(model)
             logging.info("[STORE] Model saved to RDF Knowledge Graph")
 
             self.mastodon.post_status(f"Training complete. Updated model: {model.tolist()}")
             logging.info("[NOTIFY] Status posted to Mastodon")
-            return gradients
+            return model
         except Exception as e:
             logging.error(f"[ERROR] Failed during training and deployment: {e}", exc_info=True)
 
@@ -89,6 +90,17 @@ class MusicRecommendationFungus:
         switch_decision = feedback < self.feedback_threshold
         logging.info(f"[DECISION] Switch team: {switch_decision}")
         return switch_decision
+
+    def answer_user_feedback(self):
+        statuses = self.mastodon.fetch_latest_statuses(None)
+        feedback = 1
+        fresh_statuses = filter(lambda s: s["id"] not in self.mastodon.ids_of_replied_statuses, statuses)
+        for status in fresh_statuses:
+            if "babyfungus" in status['content']:
+                reply = self.song_recommendation_service.get_song_recommendations(status['content'])
+                self.mastodon.reply_to_status(status['id'], status['account']['username'], reply)
+                feedback /= 2
+        return feedback
 
     def evolve_behavior(self, feedback):
         mutation_chance = 0.1
