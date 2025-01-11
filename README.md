@@ -1,4 +1,4 @@
-# BabyFungus
+# MusicRecommendationFungus
 
 This project simulates federated learning with interactions across an RDF Knowledge Graph and Mastodon. The idea: train a model while collaborating with other agents and posting updates to Mastodon.
 

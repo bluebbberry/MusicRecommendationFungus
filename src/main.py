@@ -17,9 +17,9 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
-class BabyFungus:
+class MusicRecommendationFungus:
     def __init__(self):
-        logging.info("[INIT] Initializing Baby Fungus instance")
+        logging.info("[INIT] Initializing Music Recommendation instance")
         self.mastodon = MastodonClient()
         self.rdf_kg = RDFKnowledgeGraph(mastodon_client=self.mastodon,
                                         fuseki_server=os.getenv("FUSEKI_SERVER_UPDATE_URL"),
@@ -99,6 +99,6 @@ class BabyFungus:
             logging.info(f"[EVOLVE] Feedback threshold mutated from {old_threshold} to {self.feedback_threshold}")
 
 if __name__ == "__main__":
-    logging.info("[STARTUP] Launching Baby Fungus instance")
-    baby_fungus = BabyFungus()
+    logging.info("[STARTUP] Launching MusicRecommendationFungus instance")
+    baby_fungus = MusicRecommendationFungus()
     baby_fungus.start()
