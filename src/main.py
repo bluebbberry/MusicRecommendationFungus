@@ -8,6 +8,7 @@ import datetime
 import random
 
 from song_recommend_service import SongRecommendService
+import re
 
 # Load environment variables
 load_dotenv()
@@ -98,11 +99,19 @@ class MusicRecommendationFungus:
         fresh_statuses = filter(lambda s: s["id"] not in self.mastodon.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
             if "babyfungus" in status['content']:
-                #reply = self.song_recommendation_service.get_song_recommendations(status['content'])
-                reply = self.song_recommendation_service.get_song_recommendations(1)
+                reply = self.song_recommendation_service.get_song_recommendations(self.extract_first_number(status['content']))
                 self.mastodon.reply_to_status(status['id'], status['account']['username'], reply)
                 feedback /= 2
         return feedback
+
+    def extract_first_number(self, s):
+        # Check if the string contains any digits
+        if re.search(r'\d', s):
+            # Extract the first number using regex
+            match = re.search(r'^\d+', s)
+            return int(match.group()) if match else 1
+        else:
+            return 1
 
     def evolve_behavior(self, feedback):
         mutation_chance = 0.1
