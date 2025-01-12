@@ -1,7 +1,6 @@
 import time
 import logging
 import os
-from dotenv import load_dotenv
 from rdf_knowledge_graph import RDFKnowledgeGraph
 from mastodon_client import MastodonClient
 import datetime
@@ -12,6 +11,7 @@ from song_recommend_service import SongRecommendService
 import re
 
 # Load environment variables
+from dotenv import load_dotenv
 load_dotenv()
 
 # Configure logging
@@ -24,9 +24,7 @@ class MusicRecommendationFungus:
     def __init__(self):
         logging.info("[INIT] Initializing Music Recommendation instance")
         self.mastodon = MastodonClient()
-        self.rdf_kg = RDFKnowledgeGraph(mastodon_client=self.mastodon,
-                                        fuseki_server=os.getenv("FUSEKI_SERVER_UPDATE_URL"),
-                                        fuseki_query=os.getenv("FUSEKI_SERVER_QUERY_URL"))
+        self.rdf_kg = RDFKnowledgeGraph(mastodon_client=self.mastodon)
         self.rdf_kg.insert_gradient(2)
         self.rdf_kg.retrieve_all_gradients(None)
         self.song_recommendation_service = SongRecommendService(songs_csv='songs.csv', user_ratings_csv='user_ratings.csv')
@@ -82,7 +80,7 @@ class MusicRecommendationFungus:
             logging.info(f"[RESULT] Model trained successfully.")
             self.rdf_kg.save_model("my-model", model)
             logging.info("[STORE] Model saved to RDF Knowledge Graph")
-            self.mastodon.post_status(f"Model updated.")
+            self.mastodon.post_status(f"[FUNGUS] Model updated.")
             logging.info("[NOTIFY] Status posted to Mastodon")
         except Exception as e:
             logging.error(f"[ERROR] Failed during training and deployment: {e}", exc_info=True)
@@ -97,20 +95,11 @@ class MusicRecommendationFungus:
         feedback = 1
         fresh_statuses = filter(lambda s: s["id"] not in self.mastodon.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
-            if "babyfungus" in status['content']:
-                reply = self.song_recommendation_service.get_song_recommendations(self.extract_first_number(status['content']))
-                self.mastodon.reply_to_status(status['id'], status['account']['username'], reply)
+            if "[FUNGUS]" not in status['content']:
+                reply = self.song_recommendation_service.get_song_recommendations(self.song_recommendation_service.extract_song_from_string(status['content']))
+                self.mastodon.reply_to_status(status['id'], status['account']['username'], "[FUNGUS]" + str(reply))
                 feedback /= 2
         return feedback
-
-    def extract_first_number(self, s):
-        # Check if the string contains any digits
-        if re.search(r'\d', s):
-            # Extract the first number using regex
-            match = re.search(r'^\d+', s)
-            return int(match.group()) if match else 1
-        else:
-            return 1
 
     def evolve_behavior(self, feedback):
         mutation_chance = 0.1

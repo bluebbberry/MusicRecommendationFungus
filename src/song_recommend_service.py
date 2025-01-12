@@ -1,3 +1,5 @@
+import logging
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -5,6 +7,9 @@ import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import json
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 
 class SongRecommendService:
@@ -104,15 +109,15 @@ class SongRecommendService:
             if (epoch + 1) % 10 == 0:
                 print(f'Epoch [{epoch + 1}/{self.num_epochs}], Loss: {loss.item():.4f}')
 
-    def get_song_recommendations(self, song_id, top_n=5):
+    def get_song_recommendations(self, title, top_n=5):
         """Recommend the top N songs most similar to a given song."""
         self.model.eval()  # Set the model to evaluation mode
 
         # Get the index of the song based on song_id
-        song_idx = self.songs_data[self.songs_data['song_id'] == song_id].index[0]
+        song_titlex = self.songs_data[self.songs_data['title'] == title].index[0]
 
         # Get the features of the given song
-        song_features = torch.tensor(self.features_encoded.iloc[song_idx].values, dtype=torch.float32).unsqueeze(0)
+        song_features = torch.tensor(self.features_encoded.iloc[song_titlex].values, dtype=torch.float32).unsqueeze(0)
 
         # Predict the rating for the song
         with torch.no_grad():
@@ -128,7 +133,7 @@ class SongRecommendService:
         top_n_indices = sorted_indices[1:top_n + 1]  # Exclude the song itself
 
         # Get the song IDs of the top N recommended songs
-        recommended_song_ids = self.songs_data.iloc[top_n_indices]['song_id'].values
+        recommended_song_ids = self.songs_data.iloc[top_n_indices]['title'].values
 
         return recommended_song_ids
 
@@ -152,6 +157,14 @@ class SongRecommendService:
         recommended_songs = list(set(recommended_songs))
 
         return recommended_songs[:top_n]
+
+    def extract_song_from_string(self, text):
+        # Check each title against the provided string
+        for title in self.songs_data['title']:
+            if title.lower() in text.lower():
+                logging.info("[USER REQUEST] Song: {}".format(title))
+                return title
+        return "Blinding Lights"
 
 
 # Example usage:

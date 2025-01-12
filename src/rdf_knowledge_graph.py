@@ -6,25 +6,27 @@ from SPARQLWrapper import SPARQLWrapper, JSON
 import json
 import base64
 import torch
+import os
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 
 class RDFKnowledgeGraph:
-    def __init__(self, fuseki_server, fuseki_query, mastodon_client, base_url="http://localhost:3030", dataset="my-knowledge-base"):
-        self.FUSEKI_SERVER = fuseki_server
-        self.FUSEKI_QUERY = fuseki_query
+    def __init__(self, mastodon_client, fuseki_url=os.getenv("FUSEKI_SERVER_URL"), dataset="my-knowledge-base"):
+        self.update_url = f"{fuseki_url}/{dataset}/update"
+        self.query_url = f"{fuseki_url}/{dataset}/query"
+        self.fuseki_url = fuseki_url + "/" + dataset
         self.DATA_NS = Namespace("http://example.org/data/")
         self.graph = Graph()
         self.graph.bind("data", self.DATA_NS)
         self.mastodon_client = mastodon_client
-        self.update_url = f"{base_url}/{dataset}/update"
-        self.sparql_url = f"{base_url}/{dataset}/query"
-        self.fuseki_url = base_url + "/" + dataset
         self.sparql = SPARQLWrapper(self.fuseki_url)
 
     def save_to_knowledge_graph(self, model):
         self.graph.set((self.DATA_NS["model"], self.DATA_NS["weights"], Literal(str(model.tolist()))))
-        response = requests.post(self.FUSEKI_SERVER, data=self.graph.serialize(format='nt'))
+        response = requests.post(self.update_url, data=self.graph.serialize(format='nt'))
         if response.ok:
             logging.info("Model successfully saved to knowledge graph.")
         else:
@@ -32,7 +34,7 @@ class RDFKnowledgeGraph:
 
     def share_gradients(self, gradients):
         self.graph.set((self.DATA_NS["model"], self.DATA_NS["gradients"], Literal(str(gradients.tolist()))))
-        response = requests.post(self.FUSEKI_SERVER, data=self.graph.serialize(format='nt'))
+        response = requests.post(self.update_url, data=self.graph.serialize(format='nt'))
         if response.ok:
             logging.info("Gradients successfully shared.")
         else:
@@ -44,7 +46,7 @@ class RDFKnowledgeGraph:
         SELECT ?gradients WHERE { ?model data:gradients ?gradients }
         LIMIT 5
         """
-        response = requests.post(self.FUSEKI_QUERY, data={'query': query}, headers={'Accept': 'application/sparql-results+json'})
+        response = requests.post(self.query_url, data={'query': query}, headers={'Accept': 'application/sparql-results+json'})
         results = response.json().get("results", {}).get("bindings", [])
         aggregated_gradients = []
         for result in results:
@@ -113,7 +115,7 @@ class RDFKnowledgeGraph:
 
         # Send the SPARQL SELECT query to retrieve all gradient values
         params = {'query': sparql_select_query, 'format': 'application/json'}
-        response = requests.get(self.sparql_url, params=params)
+        response = requests.get(self.query_url, params=params)
 
         if response.status_code == 200:
             result = response.json()
