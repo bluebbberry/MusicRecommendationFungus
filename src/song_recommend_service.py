@@ -1,14 +1,14 @@
 import logging
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 import json
-# Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 
@@ -87,7 +87,6 @@ class SongRecommendService:
         X = torch.tensor(self.features_encoded.values, dtype=torch.float32)
 
         # Dummy target ratings (you can replace with actual user ratings if available)
-        # In a real scenario, you would use ratings from the 'user_ratings_data'
         target = torch.randn(X.shape[0])  # Random target ratings as placeholders
 
         # Train the model for the specified number of epochs
@@ -119,7 +118,7 @@ class SongRecommendService:
         # Get the features of the given song
         song_features = torch.tensor(self.features_encoded.iloc[song_titlex].values, dtype=torch.float32).unsqueeze(0)
 
-        # Predict the rating for the song
+        # Predict the rating for the song (not used for content-based filtering directly)
         with torch.no_grad():
             predicted_rating = self.model(song_features).item()
 
@@ -128,12 +127,16 @@ class SongRecommendService:
         with torch.no_grad():
             all_song_predictions = self.model(all_song_features).squeeze()
 
-        # Get the top N most similar songs based on predicted ratings
-        sorted_indices = torch.argsort(all_song_predictions, descending=True)
-        top_n_indices = sorted_indices[1:top_n + 1]  # Exclude the song itself
+        # Use content-based filtering (cosine similarity) to find similar songs
+        song_feature_array = self.features_encoded.values
+        similarity_matrix = cosine_similarity(song_feature_array)
+        song_index = self.songs_data[self.songs_data['title'] == title].index[0]
+        similarities = similarity_matrix[song_index]
 
-        # Get the song IDs of the top N recommended songs
-        recommended_song_ids = self.songs_data.iloc[top_n_indices]['title'].values
+        # Sort songs based on cosine similarity (excluding the song itself)
+        similar_songs_idx = similarities.argsort()[::-1][1:top_n + 1]
+
+        recommended_song_ids = self.songs_data.iloc[similar_songs_idx]['title'].values
 
         return recommended_song_ids
 
@@ -178,11 +181,14 @@ class SongRecommendService:
 # 3. Get song recommendations for a specific song
 # recommended_songs = recommendation_service.get_song_recommendations("Bohemian Rhapsody", top_n=5)
 # print(f"Top 5 recommended songs similar to song Bohemian Rhapsody: {recommended_songs}")
-#
+
 # recommended_songs = recommendation_service.get_song_recommendations("Smells Like Teen Spirit", top_n=5)
 # print(f"Top 5 recommended songs similar to song Smells Like Teen Spirit: {recommended_songs}")
 
 # recommended_songs = recommendation_service.get_song_recommendations("Hotel California", top_n=5)
+# print(f"Top 5 recommended songs similar to song Hotel California: {recommended_songs}")
+
+# recommended_songs = recommendation_service.get_song_recommendations("Bad Guy", top_n=5)
 # print(f"Top 5 recommended songs similar to song Hotel California: {recommended_songs}")
 
 # 4. Recommend songs for a user
