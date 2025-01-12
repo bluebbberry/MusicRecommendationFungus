@@ -72,7 +72,7 @@ class RDFKnowledgeGraph:
         return None
 
     def save_model(self, model_name, model):
-        self.insert_model_state(model_name, model)
+        self.insert_model_state(model_name, model.get_state())
 
     def fetch_all_model_from_knowledge_base(self, link_to_model):
         return self.retrieve_all_model_states(link_to_model)

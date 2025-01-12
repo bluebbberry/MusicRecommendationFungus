@@ -55,7 +55,7 @@ class MusicRecommendationFungus:
                     all_models = self.rdf_kg.fetch_all_model_from_knowledge_base(link_to_model)
                     logging.info(f"Received models from knowledge base: {all_models}")
                     updates = self.rdf_kg.fetch_updates_from_knowledge_base(link_to_model)
-                    self.train_and_deploy_model(all_models[-1], updates)
+                    self.train_and_deploy_model(all_models[-1]["modelState"], updates)
                     # aggregate knowledge from other nodes
                     # TODO: Include again
                     # self.rdf_kg.aggregate_updates_from_other_nodes(link_to_model, model)
