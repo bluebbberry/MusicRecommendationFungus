@@ -2,6 +2,7 @@
 import requests
 from rdflib import Graph, Namespace, Literal
 import logging
+from SPARQLWrapper import SPARQLWrapper, JSON
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,6 +16,8 @@ class RDFKnowledgeGraph:
         self.mastodon_client = mastodon_client
         self.update_url = f"{base_url}/{dataset}/update"
         self.sparql_url = f"{base_url}/{dataset}/query"
+        self.fuseki_url = base_url + "/" + dataset
+        self.sparql = SPARQLWrapper(self.fuseki_url)
 
     def save_to_knowledge_graph(self, model):
         self.graph.set((self.DATA_NS["model"], self.DATA_NS["weights"], Literal(str(model.tolist()))))
@@ -69,7 +72,7 @@ class RDFKnowledgeGraph:
         self.insert_gradient(gradient)
 
     def fetch_model_from_knowledge_base(self, link_to_model):
-        return self.retrieve_all_gradients(link_to_model)
+        return self.retrieve_all_models(link_to_model)
 
     def fetch_updates_from_knowledge_base(self, link_to_model):
         return self.retrieve_all_gradients(link_to_model)
@@ -117,6 +120,72 @@ class RDFKnowledgeGraph:
             return gradients
         else:
             print(f"Error retrieving data: {response.status_code} - {response.text}")
+            return []
+
+    def insert_model(self, model_name, songs_csv, user_ratings_csv, num_epochs, hidden_dim, lr):
+        """
+        Inserts the model parameters into the Fuseki knowledge base.
+        """
+        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql_insert_query = f'''
+        PREFIX ex: <http://example.org/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        INSERT DATA {{
+            ex:{model_name} a ex:ContentBasedModel ;
+                            ex:songsData "{songs_csv}" ;
+                            ex:userRatingsData "{user_ratings_csv}" ;
+                            ex:numEpochs "{num_epochs}"^^xsd:integer ;
+                            ex:hiddenDim "{hidden_dim}"^^xsd:integer ;
+                            ex:learningRate "{lr}"^^xsd:float .
+        }}
+        '''
+        sparql.setQuery(sparql_insert_query)
+        sparql.setMethod('POST')
+        sparql.setReturnFormat(JSON)
+        try:
+            sparql.query()
+            print(f"Model '{model_name}' inserted successfully.")
+        except Exception as e:
+            print(f"Error inserting model: {e}")
+
+    def retrieve_all_models(self, link_to_model):
+        """
+        Retrieves all model parameters stored in the Fuseki server.
+        """
+        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql_select_query = '''
+        PREFIX ex: <http://example.org/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        SELECT ?model ?songsData ?userRatingsData ?numEpochs ?hiddenDim ?learningRate
+        WHERE {
+            ?model a ex:ContentBasedModel ;
+                   ex:songsData ?songsData ;
+                   ex:userRatingsData ?userRatingsData ;
+                   ex:numEpochs ?numEpochs ;
+                   ex:hiddenDim ?hiddenDim ;
+                   ex:learningRate ?learningRate .
+        }
+        '''
+        sparql.setQuery(sparql_select_query)
+        sparql.setReturnFormat(JSON)
+        try:
+            results = sparql.query().convert()
+            models = [
+                {
+                    "model": result["model"]["value"],
+                    "songsData": result["songsData"]["value"],
+                    "userRatingsData": result.get("userRatingsData", {}).get("value", "N/A"),
+                    "numEpochs": int(result["numEpochs"]["value"]),
+                    "hiddenDim": int(result["hiddenDim"]["value"]),
+                    "learningRate": float(result["learningRate"]["value"]),
+                }
+                for result in results["results"]["bindings"]
+            ]
+            return models
+        except Exception as e:
+            print(f"Error retrieving models: {e}")
             return []
 
     def aggregate_updates_from_other_nodes(self, link_to_model, model):

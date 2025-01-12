@@ -72,7 +72,8 @@ class SongRecommendService:
         if model is None:
             model = self.model
         else:
-            #model = json.loads(model)
+            model = self.model
+            self.model["hidden_dim"] = model[0]["hiddenDim"] # comes as list
             pass
 
         """Train the model over multiple epochs."""
