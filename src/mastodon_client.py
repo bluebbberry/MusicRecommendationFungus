@@ -3,6 +3,9 @@ import requests
 import numpy as np
 import os
 import logging
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 
