@@ -131,7 +131,7 @@ class SongRecommendService:
         top_n_indices = sorted_indices[1:top_n + 1]  # Exclude the song itself
 
         # Get the song IDs of the top N recommended songs
-        recommended_song_ids = self.songs_data.iloc[top_n_indices]['song_id'].values
+        recommended_song_ids = self.songs_data.iloc[top_n_indices]['title'].values
 
         return recommended_song_ids
 
