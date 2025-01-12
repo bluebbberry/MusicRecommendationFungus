@@ -10,6 +10,8 @@ import os
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()
+import csv
+import pandas as pd
 
 logging.basicConfig(level=logging.INFO)
 
@@ -154,6 +156,88 @@ class RDFKnowledgeGraph:
         except Exception as e:
             print(f"Error inserting model: {e}")
 
+    def insert_song_data(self, song_id, title, genre, artist, tempo, duration):
+        """
+        Inserts the individual song data into the Fuseki knowledge base.
+        """
+        # Prepare the SPARQL query to insert the song data
+        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql_insert_query = f'''
+        PREFIX ex: <http://example.org/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        INSERT DATA {{
+            ex:song_{song_id} a ex:Song ;
+                               ex:songId {song_id} ;
+                               ex:title "{title}" ;
+                               ex:genre "{genre}" ;
+                               ex:artist "{artist}" ;
+                               ex:tempo {tempo} ;
+                               ex:duration {duration} .
+        }}
+        '''
+
+        sparql.setQuery(sparql_insert_query)
+        sparql.setMethod('POST')
+        sparql.setReturnFormat(JSON)
+
+        try:
+            sparql.query()
+            print(f"Song '{title}' inserted successfully.")
+        except Exception as e:
+            print(f"Error inserting song: {e}")
+
+    def get_all_songs(self):
+        """
+        Retrieves all songs and their data from the Fuseki knowledge base.
+        """
+        # Prepare the SPARQL query to retrieve all song data
+        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql_select_query = '''
+        PREFIX ex: <http://example.org/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        SELECT ?song_id ?title ?genre ?artist ?tempo ?duration WHERE {
+            ?song a ex:Song ;
+                  ex:songId ?song_id ;
+                  ex:title ?title ;
+                  ex:genre ?genre ;
+                  ex:artist ?artist ;
+                  ex:tempo ?tempo ;
+                  ex:duration ?duration .
+        }
+        '''
+
+        sparql.setQuery(sparql_select_query)
+        sparql.setReturnFormat(JSON)
+
+        try:
+            results = sparql.query().convert()
+
+            # Process the result
+            songs = []
+            for song_data in results["results"]["bindings"]:
+                song_info = {
+                    "song_id": song_data["song_id"]["value"],
+                    "title": song_data["title"]["value"],
+                    "genre": song_data["genre"]["value"],
+                    "artist": song_data["artist"]["value"],
+                    "tempo": int(song_data["tempo"]["value"]),
+                    "duration": int(song_data["duration"]["value"])
+                }
+                songs.append(song_info)
+
+            # Convert the list of dictionaries into a pandas DataFrame
+            if songs:
+                songs_df = pd.DataFrame(songs)
+                return songs_df
+            else:
+                print("No songs found in the database.")
+                return pd.DataFrame()  # Return an empty DataFrame if no data is found
+        except Exception as e:
+            print(f"Error retrieving song data: {e}")
+            return []
+
     def retrieve_all_model_states(self, link_to_model):
         """
         Retrieves all model parameters stored in the Fuseki server and decodes them.
@@ -187,7 +271,6 @@ class RDFKnowledgeGraph:
             print(f"Error retrieving models: {e}")
             return []
 
-
     def aggregate_model_states(self, current_model_state, all_model_states, current_model_weight=0.5):
         """
         Aggregates model states from multiple nodes using a weighted averaging strategy.
@@ -211,3 +294,20 @@ class RDFKnowledgeGraph:
 
         print("Model states aggregated successfully with weighted averaging.")
         return aggregated_state
+
+    def insert_songs_from_csv(self, csv_file):
+        """
+        Inserts song data from a CSV file into the knowledge base.
+        """
+        with open(csv_file, mode='r') as file:
+            csv_reader = csv.DictReader(file)
+            for row in csv_reader:
+                song_id = row['song_id']
+                title = row['title']
+                genre = row['genre']
+                artist = row['artist']
+                tempo = int(row['tempo'])
+                duration = int(row['duration'])
+
+                # Insert each song into the knowledge base
+                self.insert_song_data(song_id, title, genre, artist, tempo, duration)

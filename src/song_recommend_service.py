@@ -8,14 +8,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.model_selection import train_test_split
 import json
 from dotenv import load_dotenv
+from rdf_knowledge_graph import RDFKnowledgeGraph
 
 load_dotenv()
 
 
 class SongRecommendService:
-    def __init__(self, songs_csv, user_ratings_csv=None, num_epochs=100, hidden_dim=64, lr=0.001):
-        # Load the song data
-        self.songs_data = pd.read_csv(songs_csv)
+    def __init__(self, rdf_knowledge_graph, user_ratings_csv=None, num_epochs=100, hidden_dim=64, lr=0.001):
+        # Load song data from knowledge base
+        self.rdf_knowledge_graph = rdf_knowledge_graph
+        self.songs_data = self.rdf_knowledge_graph.get_all_songs()
 
         # If user ratings are provided (optional), load the data
         self.user_ratings_data = pd.read_csv(user_ratings_csv) if user_ratings_csv else None
