@@ -54,7 +54,7 @@ class MusicRecommendationFungus:
                     logging.info("[TRAINING] New fungus group detected, initiating training")
                     self.train_model()
                     all_models = self.rdf_kg.fetch_all_model_from_knowledge_base(link_to_model)
-                    logging.info(f"Received models from other nodes: {all_models}")
+                    logging.info(f"Received models from other nodes (size: {len(all_models)})")
                     aggregated_model_state = self.rdf_kg.aggregate_model_states(self.song_recommendation_service.model.get_state(), all_models)
                     # deploy new model
                     self.song_recommendation_service.model.set_state(aggregated_model_state)
