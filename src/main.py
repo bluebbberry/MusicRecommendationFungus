@@ -6,6 +6,7 @@ from rdf_knowledge_graph import RDFKnowledgeGraph
 from mastodon_client import MastodonClient
 import datetime
 import random
+import json
 
 from song_recommend_service import SongRecommendService
 import re
@@ -29,6 +30,7 @@ class MusicRecommendationFungus:
         self.rdf_kg.insert_gradient(2)
         self.rdf_kg.retrieve_all_gradients(None)
         self.song_recommendation_service = SongRecommendService(songs_csv='songs.csv', user_ratings_csv='user_ratings.csv')
+        self.rdf_kg.insert_model_state("my-model", self.song_recommendation_service.model.get_state())
         self.feedback_threshold = float(os.getenv("FEEDBACK_THRESHOLD", 0.5))
         logging.info(f"[CONFIG] Feedback threshold set to {self.feedback_threshold}")
 
@@ -50,9 +52,10 @@ class MusicRecommendationFungus:
 
                 if link_to_model is not None:
                     logging.info("[TRAINING] New fungus group detected, initiating training")
-                    model = self.rdf_kg.fetch_model_from_knowledge_base(link_to_model)
+                    all_models = self.rdf_kg.fetch_all_model_from_knowledge_base(link_to_model)
+                    logging.info(f"Received models from knowledge base: {all_models}")
                     updates = self.rdf_kg.fetch_updates_from_knowledge_base(link_to_model)
-                    model = self.train_and_deploy_model(self.song_recommendation_service.model, updates)
+                    self.train_and_deploy_model(all_models[-1]["modelState"], updates)
                     # aggregate knowledge from other nodes
                     # TODO: Include again
                     # self.rdf_kg.aggregate_updates_from_other_nodes(link_to_model, model)
@@ -75,16 +78,11 @@ class MusicRecommendationFungus:
         try:
             logging.info("[TRAINING] Starting model training")
             model = self.song_recommendation_service.train(model)
-            logging.info("Posting model update to Mastodon.")
-            self.mastodon.post_status(f"Model updated: {self.song_recommendation_service.model}")
             logging.info(f"[RESULT] Model trained successfully. Model: {model}")
-
-            self.rdf_kg.save_model(model)
+            self.rdf_kg.save_model("my-model", model)
             logging.info("[STORE] Model saved to RDF Knowledge Graph")
-
-            self.mastodon.post_status(f"Training complete. Updated model: {model}")
+            self.mastodon.post_status(f"Model updated: {model}")
             logging.info("[NOTIFY] Status posted to Mastodon")
-            return model
         except Exception as e:
             logging.error(f"[ERROR] Failed during training and deployment: {e}", exc_info=True)
 

@@ -45,6 +45,14 @@ class SongRecommendService:
             x = self.fc2(x)
             return x
 
+        def get_state(self):
+            """Returns the model's state dictionary (weights and biases)."""
+            return self.state_dict()
+
+        def set_state(self, state_dict):
+            """Sets the model's state using a provided state dictionary."""
+            self.load_state_dict(state_dict)
+
     def preprocess_data(self):
         """Preprocess the song data (encoding categorical features and scaling numerical ones)."""
         # Extract features (Assuming 'genre', 'artist', 'tempo', 'duration' are available in the dataset)
@@ -68,11 +76,12 @@ class SongRecommendService:
 
         return features_encoded, song_ids
 
-    def train(self, model):
-        if model is None:
+    def train(self, state):
+        if state is None:
             model = self.model
         else:
-            #model = json.loads(model)
+            model = self.model
+            model.set_state(state)
             pass
 
         """Train the model over multiple epochs."""

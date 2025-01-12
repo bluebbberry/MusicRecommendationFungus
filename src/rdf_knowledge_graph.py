@@ -2,6 +2,10 @@
 import requests
 from rdflib import Graph, Namespace, Literal
 import logging
+from SPARQLWrapper import SPARQLWrapper, JSON
+import json
+import base64
+import torch
 
 logging.basicConfig(level=logging.INFO)
 
@@ -15,6 +19,8 @@ class RDFKnowledgeGraph:
         self.mastodon_client = mastodon_client
         self.update_url = f"{base_url}/{dataset}/update"
         self.sparql_url = f"{base_url}/{dataset}/query"
+        self.fuseki_url = base_url + "/" + dataset
+        self.sparql = SPARQLWrapper(self.fuseki_url)
 
     def save_to_knowledge_graph(self, model):
         self.graph.set((self.DATA_NS["model"], self.DATA_NS["weights"], Literal(str(model.tolist()))))
@@ -65,11 +71,11 @@ class RDFKnowledgeGraph:
         self.mastodon_client.post_status(f"Request-to-join: Looking for a training group. {self.mastodon_client.hashtag}")
         return None
 
-    def save_model(self, gradient):
-        self.insert_gradient(gradient)
+    def save_model(self, model_name, model):
+        self.insert_model_state(model_name, model.get_state())
 
-    def fetch_model_from_knowledge_base(self, link_to_model):
-        return self.retrieve_all_gradients(link_to_model)
+    def fetch_all_model_from_knowledge_base(self, link_to_model):
+        return self.retrieve_all_model_states(link_to_model)
 
     def fetch_updates_from_knowledge_base(self, link_to_model):
         return self.retrieve_all_gradients(link_to_model)
@@ -117,6 +123,66 @@ class RDFKnowledgeGraph:
             return gradients
         else:
             print(f"Error retrieving data: {response.status_code} - {response.text}")
+            return []
+
+    def insert_model_state(self, model_name, model_state):
+        """
+        Inserts the model parameters into the Fuseki knowledge base using base64 encoding.
+        """
+        # Convert tensors to lists for serialization
+        state_dict = {k: v.tolist() for k, v in model_state.items()}
+        state_json = json.dumps(state_dict)
+        state_encoded = base64.b64encode(state_json.encode('utf-8')).decode('utf-8')
+        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql_insert_query = f'''
+        PREFIX ex: <http://example.org/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        INSERT DATA {{
+            ex:{model_name} a ex:ContentBasedModel ;
+                            ex:modelState "{state_encoded}" .
+        }}
+        '''
+        sparql.setQuery(sparql_insert_query)
+        sparql.setMethod('POST')
+        sparql.setReturnFormat(JSON)
+        try:
+            sparql.query()
+            print(f"Model '{model_name}' inserted successfully.")
+        except Exception as e:
+            print(f"Error inserting model: {e}")
+
+    def retrieve_all_model_states(self, link_to_model):
+        """
+        Retrieves all model parameters stored in the Fuseki server and decodes them.
+        """
+        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql_select_query = '''
+        PREFIX ex: <http://example.org/>
+        PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+
+        SELECT ?model ?modelState
+        WHERE {
+            ?model a ex:ContentBasedModel ;
+                   ex:modelState ?modelState .
+        }
+        '''
+        sparql.setQuery(sparql_select_query)
+        sparql.setReturnFormat(JSON)
+        try:
+            results = sparql.query().convert()
+            models = []
+            for result in results["results"]["bindings"]:
+                model = result["model"]["value"]
+                state_encoded = result["modelState"]["value"]
+                state_json = base64.b64decode(state_encoded).decode('utf-8')
+                state_dict = json.loads(state_json)
+                # Convert lists back to tensors
+                model_state = {k: torch.tensor(v) for k, v in state_dict.items()}
+                models.append({"model": model, "modelState": model_state})
+            return models
+        except Exception as e:
+            print(f"Error retrieving models: {e}")
             return []
 
     def aggregate_updates_from_other_nodes(self, link_to_model, model):
