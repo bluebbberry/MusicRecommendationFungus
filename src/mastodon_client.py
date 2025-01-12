@@ -15,6 +15,7 @@ class MastodonClient:
         self.instance_url = os.getenv("MASTODON_INSTANCE_URL")
         self.hashtag = os.getenv("NUTRIAL_TAG")
         self.ids_of_replied_statuses = []
+        self.ids_of_replies = []
 
     def post_status(self, status_text):
         url = f"{self.instance_url}/api/v1/statuses"
@@ -60,6 +61,32 @@ class MastodonClient:
             logging.error(f"Error: {response.status_code}")
             return None
 
+    def count_likes_of_all_statuses(self):
+        overall_likes = 0
+        for status_id in self.ids_of_replies:
+            favourites_count = self.count_likes_of_status(status_id)
+            overall_likes += favourites_count
+        return overall_likes
+
+    def count_likes_of_status(self, status_id):
+        base_url = f"{self.instance_url}/api/v1"
+
+        headers = {
+            'Authorization': f'Bearer {self.api_token}',
+            'Accept': 'application/json'
+        }
+
+        response = requests.get(f"{base_url}/statuses/{status_id}", headers=headers)
+
+        if response.status_code == 200:
+            data = response.json()
+            favourites_count = data['favourites_count']
+            logging.info(f"Status {status_id} was liked {data['favourites_count']}")
+            return favourites_count
+        else:
+            logging.error(f"Error: {response.status_code}")
+            return None
+
     def reply_to_status(self, status_id, username, message):
         # Construct the reply message mentioning the user
         reply_message = f"@{username} {message}"
@@ -82,6 +109,7 @@ class MastodonClient:
 
         if response.status_code == 200:
             self.ids_of_replied_statuses.append(status_id)
+            self.ids_of_replies.append(response.json()["id"])
             print("Reply sent successfully!")
         else:
             print(f"Failed to send reply: {response.status_code}")
