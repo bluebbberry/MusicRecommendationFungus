@@ -3,6 +3,9 @@ import requests
 from rdflib import Graph, Namespace, Literal
 import logging
 from SPARQLWrapper import SPARQLWrapper, JSON
+import json
+import base64
+import torch
 
 logging.basicConfig(level=logging.INFO)
 
@@ -68,11 +71,11 @@ class RDFKnowledgeGraph:
         self.mastodon_client.post_status(f"Request-to-join: Looking for a training group. {self.mastodon_client.hashtag}")
         return None
 
-    def save_model(self, gradient):
-        self.insert_gradient(gradient)
+    def save_model(self, model_name, model):
+        self.insert_model_state(model_name, model)
 
-    def fetch_model_from_knowledge_base(self, link_to_model):
-        return self.retrieve_all_models(link_to_model)
+    def fetch_all_model_from_knowledge_base(self, link_to_model):
+        return self.retrieve_all_model_states(link_to_model)
 
     def fetch_updates_from_knowledge_base(self, link_to_model):
         return self.retrieve_all_gradients(link_to_model)
@@ -122,10 +125,14 @@ class RDFKnowledgeGraph:
             print(f"Error retrieving data: {response.status_code} - {response.text}")
             return []
 
-    def insert_model(self, model_name, songs_csv, user_ratings_csv, num_epochs, hidden_dim, lr):
+    def insert_model_state(self, model_name, model_state):
         """
-        Inserts the model parameters into the Fuseki knowledge base.
+        Inserts the model parameters into the Fuseki knowledge base using base64 encoding.
         """
+        # Convert tensors to lists for serialization
+        state_dict = {k: v.tolist() for k, v in model_state.items()}
+        state_json = json.dumps(state_dict)
+        state_encoded = base64.b64encode(state_json.encode('utf-8')).decode('utf-8')
         sparql = SPARQLWrapper(self.fuseki_url)
         sparql_insert_query = f'''
         PREFIX ex: <http://example.org/>
@@ -133,11 +140,7 @@ class RDFKnowledgeGraph:
 
         INSERT DATA {{
             ex:{model_name} a ex:ContentBasedModel ;
-                            ex:songsData "{songs_csv}" ;
-                            ex:userRatingsData "{user_ratings_csv}" ;
-                            ex:numEpochs "{num_epochs}"^^xsd:integer ;
-                            ex:hiddenDim "{hidden_dim}"^^xsd:integer ;
-                            ex:learningRate "{lr}"^^xsd:float .
+                            ex:modelState "{state_encoded}" .
         }}
         '''
         sparql.setQuery(sparql_insert_query)
@@ -149,40 +152,34 @@ class RDFKnowledgeGraph:
         except Exception as e:
             print(f"Error inserting model: {e}")
 
-    def retrieve_all_models(self, link_to_model):
+    def retrieve_all_model_states(self, link_to_model):
         """
-        Retrieves all model parameters stored in the Fuseki server.
+        Retrieves all model parameters stored in the Fuseki server and decodes them.
         """
         sparql = SPARQLWrapper(self.fuseki_url)
         sparql_select_query = '''
         PREFIX ex: <http://example.org/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 
-        SELECT ?model ?songsData ?userRatingsData ?numEpochs ?hiddenDim ?learningRate
+        SELECT ?model ?modelState
         WHERE {
             ?model a ex:ContentBasedModel ;
-                   ex:songsData ?songsData ;
-                   ex:userRatingsData ?userRatingsData ;
-                   ex:numEpochs ?numEpochs ;
-                   ex:hiddenDim ?hiddenDim ;
-                   ex:learningRate ?learningRate .
+                   ex:modelState ?modelState .
         }
         '''
         sparql.setQuery(sparql_select_query)
         sparql.setReturnFormat(JSON)
         try:
             results = sparql.query().convert()
-            models = [
-                {
-                    "model": result["model"]["value"],
-                    "songsData": result["songsData"]["value"],
-                    "userRatingsData": result.get("userRatingsData", {}).get("value", "N/A"),
-                    "numEpochs": int(result["numEpochs"]["value"]),
-                    "hiddenDim": int(result["hiddenDim"]["value"]),
-                    "learningRate": float(result["learningRate"]["value"]),
-                }
-                for result in results["results"]["bindings"]
-            ]
+            models = []
+            for result in results["results"]["bindings"]:
+                model = result["model"]["value"]
+                state_encoded = result["modelState"]["value"]
+                state_json = base64.b64decode(state_encoded).decode('utf-8')
+                state_dict = json.loads(state_json)
+                # Convert lists back to tensors
+                model_state = {k: torch.tensor(v) for k, v in state_dict.items()}
+                models.append({"model": model, "modelState": model_state})
             return models
         except Exception as e:
             print(f"Error retrieving models: {e}")
