@@ -80,7 +80,7 @@ class MusicRecommendationFungus:
             logging.info(f"[RESULT] Model trained successfully.")
             self.rdf_kg.save_model("my-model", model)
             logging.info("[STORE] Model saved to RDF Knowledge Graph")
-            self.mastodon.post_status(f"Model updated.")
+            self.mastodon.post_status(f"[FUNGUS] Model updated.")
             logging.info("[NOTIFY] Status posted to Mastodon")
         except Exception as e:
             logging.error(f"[ERROR] Failed during training and deployment: {e}", exc_info=True)
@@ -95,9 +95,9 @@ class MusicRecommendationFungus:
         feedback = 1
         fresh_statuses = filter(lambda s: s["id"] not in self.mastodon.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
-            if "babyfungus" in status['content']:
+            if "[FUNGUS]" not in status['content']:
                 reply = self.song_recommendation_service.get_song_recommendations(self.song_recommendation_service.extract_song_from_string(status['content']))
-                self.mastodon.reply_to_status(status['id'], status['account']['username'], reply)
+                self.mastodon.reply_to_status(status['id'], status['account']['username'], "[FUNGUS]" + str(reply))
                 feedback /= 2
         return feedback
 
