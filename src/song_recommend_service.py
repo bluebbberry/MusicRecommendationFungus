@@ -76,13 +76,7 @@ class SongRecommendService:
 
         return features_encoded, song_ids
 
-    def train(self, state):
-        if state is None:
-            model = self.model
-        else:
-            model = self.model
-            model.set_state(state)
-
+    def train_model(self):
         """Train the model over multiple epochs."""
         # Convert features to PyTorch tensor
         X = torch.tensor(self.features_encoded.values, dtype=torch.float32)
@@ -93,10 +87,10 @@ class SongRecommendService:
 
         # Train the model for the specified number of epochs
         for epoch in range(self.num_epochs):
-            model.train()
+            self.model.train()
 
             # Forward pass: Compute predicted ratings for all songs
-            outputs = model(X).squeeze()
+            outputs = self.model(X).squeeze()
 
             # Compute the loss
             loss = self.criterion(outputs, target)
@@ -109,8 +103,6 @@ class SongRecommendService:
             # Print the loss every 10 epochs
             if (epoch + 1) % 10 == 0:
                 print(f'Epoch [{epoch + 1}/{self.num_epochs}], Loss: {loss.item():.4f}')
-        self.model = model
-        return self.model
 
     def get_song_recommendations(self, song_id, top_n=5):
         """Recommend the top N songs most similar to a given song."""
