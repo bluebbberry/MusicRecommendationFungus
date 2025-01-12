@@ -170,15 +170,21 @@ class SongRecommendService:
 # Example usage:
 
 # 1. Initialize the recommendation service
-#recommendation_service = SongRecommendService(songs_csv='songs.csv', user_ratings_csv='user_ratings.csv')
+# recommendation_service = SongRecommendService(songs_csv='songs.csv', user_ratings_csv='user_ratings.csv')
 
 # 2. Train the model
-#recommendation_service.train()
+# recommendation_service.train_model()
 
 # 3. Get song recommendations for a specific song
-#recommended_songs = recommendation_service.get_song_recommendations(song_id=1, top_n=5)
-#print(f"Top 5 recommended songs similar to song 1: {recommended_songs}")
+# recommended_songs = recommendation_service.get_song_recommendations("Bohemian Rhapsody", top_n=5)
+# print(f"Top 5 recommended songs similar to song Bohemian Rhapsody: {recommended_songs}")
+#
+# recommended_songs = recommendation_service.get_song_recommendations("Smells Like Teen Spirit", top_n=5)
+# print(f"Top 5 recommended songs similar to song Smells Like Teen Spirit: {recommended_songs}")
+
+# recommended_songs = recommendation_service.get_song_recommendations("Hotel California", top_n=5)
+# print(f"Top 5 recommended songs similar to song Hotel California: {recommended_songs}")
 
 # 4. Recommend songs for a user
-#user_recommendations = recommendation_service.recommend_songs_for_user(user_id=104, top_n=5)
-#print(f"Top 5 recommended songs for user 104: {user_recommendations}")
+# user_recommendations = recommendation_service.recommend_songs_for_user(user_id=104, top_n=5)
+# print(f"Top 5 recommended songs for user 104: {user_recommendations}")
