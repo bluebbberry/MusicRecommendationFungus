@@ -82,7 +82,6 @@ class SongRecommendService:
         else:
             model = self.model
             model.set_state(state)
-            pass
 
         """Train the model over multiple epochs."""
         # Convert features to PyTorch tensor
