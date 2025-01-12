@@ -185,26 +185,27 @@ class RDFKnowledgeGraph:
             print(f"Error retrieving models: {e}")
             return []
 
-    def aggregate_updates_from_other_nodes(self, link_to_model, model):
-        updates = self.fetch_updates_from_knowledge_base(link_to_model)
-        aggregated_updates = [model]  # Include self gradients with higher weight
 
-        # Process and aggregate updates
-        for update in updates:
-            try:
-                # Convert string representation of list back to list
-                gradients = eval(update)
-                aggregated_updates.append(gradients)
-            except Exception as e:
-                logging.error(f"Error parsing gradient update: {e}")
+    def aggregate_model_states(self, current_model_state, all_model_states, current_model_weight=0.5):
+        """
+        Aggregates model states from multiple nodes using a weighted averaging strategy.
+        The current model has a higher weight in the averaging process.
+        """
+        if not all_model_states:
+            print("No models available for aggregation.")
+            return current_model_state
 
-        # Calculate the weighted average giving more weight to self gradients
-        if aggregated_updates:
-            import numpy as np
-            weights = [0.5] + [0.5 / len(updates)] * len(updates)
-            averaged_gradients = np.average(aggregated_updates, axis=0, weights=weights).tolist()
-            logging.info(f"Weighted averaged gradients computed: {averaged_gradients}")
-            return averaged_gradients
-        else:
-            logging.warning("No updates available for aggregation.")
-            return []
+        # Extract states and convert tensors to numpy arrays for averaging
+        state_keys = current_model_state.keys()
+        aggregated_state = {k: current_model_weight * current_model_state[k].numpy() for k in state_keys}
+
+        # Add the other models with a lower weight
+        for model in all_model_states:
+            for k in state_keys:
+                aggregated_state[k] += (1 - current_model_weight) * model["modelState"][k].numpy() / len(all_model_states)
+
+        # Convert back to tensors
+        aggregated_state = {k: torch.tensor(v) for k, v in aggregated_state.items()}
+
+        print("Model states aggregated successfully with weighted averaging.")
+        return aggregated_state
