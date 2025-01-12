@@ -97,10 +97,15 @@ class MusicRecommendationFungus:
         fresh_statuses = filter(lambda s: s["id"] not in self.mastodon.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
             if "[FUNGUS]" not in status['content']:
-                songs_titles = self.song_recommendation_service.get_song_recommendations(self.song_recommendation_service.extract_song_from_string(status['content']), 3)
-                for song_title in songs_titles:
-                    self.mastodon.reply_to_status(status['id'], status['account']['username'], "[FUNGUS] " + str(song_title))
-                feedback /= 2
+                song_titles = self.song_recommendation_service.get_song_recommendations(self.song_recommendation_service.extract_song_from_string(status['content']), 3)
+                self.mastodon.reply_to_status(status['id'], status['account']['username'], "[FUNGUS] " + str(song_titles))
+        # count feedback
+        num_of_statuses_send = len(self.mastodon.ids_of_replied_statuses)
+        overall_favourites = self.mastodon.count_likes_of_all_statuses()
+        if overall_favourites > 0:
+            feedback = num_of_statuses_send / overall_favourites
+        else:
+            feedback = 0
         return feedback
 
     def evolve_behavior(self, feedback):
