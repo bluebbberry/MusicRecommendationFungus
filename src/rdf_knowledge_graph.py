@@ -15,7 +15,6 @@ logging.basicConfig(level=logging.INFO)
 
 class RDFKnowledgeGraph:
     def __init__(self, mastodon_client, fuseki_url=os.getenv("FUSEKI_SERVER_URL"), dataset="my-knowledge-base"):
-        print(fuseki_url)
         self.update_url = f"{fuseki_url}/{dataset}/update"
         self.query_url = f"{fuseki_url}/{dataset}/query"
         self.fuseki_url = fuseki_url + "/" + dataset
