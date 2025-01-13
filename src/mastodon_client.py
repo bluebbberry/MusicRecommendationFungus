@@ -13,7 +13,7 @@ class MastodonClient:
     def __init__(self):
         self.api_token = os.getenv("MASTODON_API_KEY")
         self.instance_url = os.getenv("MASTODON_INSTANCE_URL")
-        self.hashtag = os.getenv("NUTRIAL_TAG")
+        self.nutrial_tag = os.getenv("NUTRIAL_TAG")
         self.ids_of_replied_statuses = []
         self.ids_of_replies = []
 
@@ -34,8 +34,11 @@ class MastodonClient:
             print(f"Error posting status: {e}")
             return None
 
-    def fetch_latest_statuses(self, model):
+    def fetch_latest_statuses(self, model, hashtag):
         base_url = f"{self.instance_url}/api/v1"
+
+        if hashtag is None:
+            hashtag = self.nutrial_tag
 
         headers = {
             'Authorization': f'Bearer {self.api_token}',
@@ -44,11 +47,11 @@ class MastodonClient:
 
         params = {
             'type': 'statuses',
-            'tag': self.hashtag,
+            'tag': hashtag,
             'limit': 30
         }
 
-        response = requests.get(f"{base_url}/timelines/tag/{self.hashtag}",
+        response = requests.get(f"{base_url}/timelines/tag/{self.nutrial_tag}",
                                 headers=headers,
                                 params=params)
 
