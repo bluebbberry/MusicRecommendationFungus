@@ -23,13 +23,13 @@ logging.basicConfig(
 class MusicRecommendationFungus:
     def __init__(self):
         logging.info("[INIT] Initializing Music Recommendation instance")
-        self.mastodon = MastodonClient()
-        self.rdf_kg = RDFKnowledgeGraph(mastodon_client=self.mastodon)
-        self.rdf_kg.insert_gradient(2)
-        self.rdf_kg.retrieve_all_gradients(None)
-        self.rdf_kg.insert_songs_from_csv('songs.csv')
-        self.song_recommendation_service = SongRecommendService(self.rdf_kg, user_ratings_csv='user_ratings.csv')
-        self.rdf_kg.insert_model_state("my-model", self.song_recommendation_service.model.get_state())
+        self.mastodon_client = MastodonClient()
+        self.knowledge_graph = RDFKnowledgeGraph(mastodon_client=self.mastodon_client)
+        self.knowledge_graph.insert_gradient(2)
+        self.knowledge_graph.retrieve_all_gradients(None)
+        self.knowledge_graph.insert_songs_from_csv('songs.csv')
+        self.song_recommendation_service = SongRecommendService(self.knowledge_graph, user_ratings_csv='user_ratings.csv')
+        self.knowledge_graph.insert_model_state("my-model", self.song_recommendation_service.model.get_state())
         self.feedback_threshold = float(os.getenv("FEEDBACK_THRESHOLD", 0.5))
         logging.info(f"[CONFIG] Feedback threshold set to {self.feedback_threshold}")
 
@@ -42,9 +42,8 @@ class MusicRecommendationFungus:
             try:
                 if switch_team or not found_initial_team:
                     logging.info("[CHECK] Searching for a new fungus group")
-                    link_to_model = self.rdf_kg.look_for_new_fungus_group()
-                    if link_to_model is not None:
-                        found_initial_team = True
+                    link_to_model = self.knowledge_graph.look_for_new_fungus_group()
+                    self.knowledge_graph.on_found_group_to_join(link_to_model)
                 else:
                     logging.info("[WAIT] No new groups found.")
                     link_to_model = None
@@ -52,9 +51,9 @@ class MusicRecommendationFungus:
                 if link_to_model is not None:
                     logging.info("[TRAINING] New fungus group detected, initiating training")
                     self.train_model()
-                    all_models = self.rdf_kg.fetch_all_model_from_knowledge_base(link_to_model)
+                    all_models = self.knowledge_graph.fetch_all_model_from_knowledge_base(link_to_model)
                     logging.info(f"Received models from other nodes (size: {len(all_models)})")
-                    aggregated_model_state = self.rdf_kg.aggregate_model_states(self.song_recommendation_service.model.get_state(), all_models)
+                    aggregated_model_state = self.knowledge_graph.aggregate_model_states(self.song_recommendation_service.model.get_state(), all_models)
                     # deploy new model
                     self.song_recommendation_service.model.set_state(aggregated_model_state)
                     logging.info("[SAVING] Deployed aggregated model as new model")
@@ -79,9 +78,9 @@ class MusicRecommendationFungus:
             self.song_recommendation_service.train_model()
             model = self.song_recommendation_service.model
             logging.info(f"[RESULT] Model trained successfully.")
-            self.rdf_kg.save_model("my-model", model)
+            self.knowledge_graph.save_model("my-model", model)
             logging.info("[STORE] Model saved to RDF Knowledge Graph")
-            self.mastodon.post_status(f"[FUNGUS] Model updated.")
+            self.mastodon_client.post_status(f"[FUNGUS] Model updated.")
             logging.info("[NOTIFY] Status posted to Mastodon")
         except Exception as e:
             logging.error(f"[ERROR] Failed during training and deployment: {e}", exc_info=True)
@@ -92,16 +91,16 @@ class MusicRecommendationFungus:
         return switch_decision
 
     def answer_user_feedback(self):
-        statuses = self.mastodon.fetch_latest_statuses(None)
+        statuses = self.mastodon_client.fetch_latest_statuses(None)
         feedback = 1
-        fresh_statuses = filter(lambda s: s["id"] not in self.mastodon.ids_of_replied_statuses, statuses)
+        fresh_statuses = filter(lambda s: s["id"] not in self.mastodon_client.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
             if "[FUNGUS]" not in status['content']:
                 song_titles = self.song_recommendation_service.get_song_recommendations(self.song_recommendation_service.extract_song_from_string(status['content']), 3)
-                self.mastodon.reply_to_status(status['id'], status['account']['username'], "[FUNGUS] " + str(song_titles))
+                self.mastodon_client.reply_to_status(status['id'], status['account']['username'], "[FUNGUS] " + str(song_titles))
         # count feedback
-        num_of_statuses_send = len(self.mastodon.ids_of_replied_statuses)
-        overall_favourites = self.mastodon.count_likes_of_all_statuses()
+        num_of_statuses_send = len(self.mastodon_client.ids_of_replied_statuses)
+        overall_favourites = self.mastodon_client.count_likes_of_all_statuses()
         if overall_favourites > 0:
             feedback = num_of_statuses_send / overall_favourites
         else:
