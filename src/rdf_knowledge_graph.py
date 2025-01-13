@@ -67,9 +67,9 @@ class RDFKnowledgeGraph:
             return None
 
         for message in messages:
-            if "kb-link" in message:
+            if "model-link" in message:
                 logging.info("Found request with join link. Preparing to join calculation ...")
-                link_to_knowledge_base = "http://example.org/data/"
+                link_to_knowledge_base = self.extract_after_model_link(message)
                 return link_to_knowledge_base
         logging.info("Announcing request to join the next epoch.")
         self.mastodon_client.post_status(f"Request-to-join: Looking for a training group. {self.mastodon_client.hashtag}")
@@ -311,3 +311,30 @@ class RDFKnowledgeGraph:
 
                 # Insert each song into the knowledge base
                 self.insert_song_data(song_id, title, genre, artist, tempo, duration)
+
+    def extract_after_model_link(self, text):
+        # Find the index of "model-link:"
+        model_link_index = text.find("model-link:")
+
+        if model_link_index == -1:
+            return ""
+
+        # Extract the substring after "model-link:"
+        result = text[model_link_index + len("model-link:") + 1:]
+
+        # Find the index of the first whitespace character
+        whitespace_index = result.find(" ")
+
+        if whitespace_index != -1:
+            return result[:whitespace_index]
+        else:
+            return result.strip()
+
+    def on_found_group_to_join(self, link_to_model):
+        self.mastodon_client.post_status("[FUNGUS] model-link: " + str(link_to_model) + " #" + self.mastodon_client.hashtag)
+        if link_to_model is not None:
+            found_initial_team = True
+            self.fuseki_url = link_to_model
+        else:
+            # default to fuseki server
+            self.fuseki_url = os.getenv("FUSEKI_SERVER_URL")
