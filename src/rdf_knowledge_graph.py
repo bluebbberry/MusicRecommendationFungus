@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import csv
 import pandas as pd
+import random
 
 logging.basicConfig(level=logging.INFO)
 
@@ -59,7 +60,8 @@ class RDFKnowledgeGraph:
     def look_for_new_fungus_group(self):
         logging.info("Stage 1: Looking for a new fungus group to join...")
         messages = []
-        statuses = self.mastodon_client.fetch_latest_statuses(None)
+        random_mycelial_tag = random.choice(os.getenv("MYCELIAL_TAG").split(";"))
+        statuses = self.mastodon_client.fetch_latest_statuses(None, random_mycelial_tag)
         for status in statuses:
             messages.append(status["content"])
         if not messages:
@@ -70,9 +72,11 @@ class RDFKnowledgeGraph:
             if "model-link" in message:
                 logging.info("Found request with join link. Preparing to join calculation ...")
                 link_to_knowledge_base = self.extract_after_model_link(message)
+                # set new hashtag
+                self.mastodon_client.nutrial_tag = random_mycelial_tag
                 return link_to_knowledge_base
         logging.info("Announcing request to join the next epoch.")
-        self.mastodon_client.post_status(f"Request-to-join: Looking for a training group. {self.mastodon_client.hashtag}")
+        self.mastodon_client.post_status(f"Request-to-join: Looking for a training group. {self.mastodon_client.nutrial_tag}")
         return None
 
     def save_model(self, model_name, model):
@@ -331,7 +335,7 @@ class RDFKnowledgeGraph:
             return result.strip()
 
     def on_found_group_to_join(self, link_to_model):
-        self.mastodon_client.post_status("[FUNGUS] model-link: " + str(link_to_model) + " #" + self.mastodon_client.hashtag)
+        self.mastodon_client.post_status("[FUNGUS] model-link: " + str(link_to_model) + " #" + self.mastodon_client.nutrial_tag)
         if link_to_model is not None:
             found_initial_team = True
             self.fuseki_url = link_to_model

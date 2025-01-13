@@ -91,7 +91,7 @@ class MusicRecommendationFungus:
         return switch_decision
 
     def answer_user_feedback(self):
-        statuses = self.mastodon_client.fetch_latest_statuses(None)
+        statuses = self.mastodon_client.fetch_latest_statuses(None, None)
         feedback = 1
         fresh_statuses = filter(lambda s: s["id"] not in self.mastodon_client.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
