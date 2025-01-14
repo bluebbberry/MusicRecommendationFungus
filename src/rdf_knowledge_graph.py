@@ -19,9 +19,6 @@ class RDFKnowledgeGraph:
         self.update_url = f"{fuseki_url}/{dataset}/update"
         self.query_url = f"{fuseki_url}/{dataset}/query"
         self.fuseki_url = fuseki_url + "/" + dataset
-        self.DATA_NS = Namespace("http://example.org/data/")
-        self.graph = Graph()
-        self.graph.bind("data", self.DATA_NS)
         self.mastodon_client = mastodon_client
         self.sparql = SPARQLWrapper(self.fuseki_url)
 
