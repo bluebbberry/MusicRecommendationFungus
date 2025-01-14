@@ -1,5 +1,4 @@
 # rdf_knowledge_graph.py
-from rdflib import Graph, Namespace
 import logging
 from SPARQLWrapper import SPARQLWrapper, JSON
 import json
@@ -9,7 +8,6 @@ import os
 from dotenv import load_dotenv
 import csv
 import pandas as pd
-import random
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -21,16 +19,14 @@ class RDFKnowledgeGraph:
         self.fuseki_url = fuseki_url + "/" + dataset
         self.mastodon_client = mastodon_client
         self.sparql = SPARQLWrapper(self.fuseki_url)
+        self.songs_data = self.get_all_songs()
 
-    def look_for_new_fungus_group(self):
+    def fetch_all_songs(self):
+        self.songs_data = self.get_all_songs()
+
+    def look_for_new_fungus_group_in_statuses(self, messages, random_mycelial_tag):
         logging.info("Stage 1: Looking for a new fungus group to join...")
-        messages = []
-        random_mycelial_tag = random.choice(os.getenv("MYCELIAL_TAG").split(";"))
-        statuses = self.mastodon_client.fetch_latest_statuses(None, random_mycelial_tag)
-        for status in statuses:
-            messages.append(status["content"])
-        if not messages:
-            logging.warning("No messages found under the nutrial hashtag. Trying again later...")
+        if messages is None:
             return None
 
         for message in messages:
@@ -43,6 +39,41 @@ class RDFKnowledgeGraph:
         logging.info("Announcing request to join the next epoch.")
         self.mastodon_client.post_status(f"Request-to-join: Looking for a training group. {self.mastodon_client.nutrial_tag}")
         return None
+
+    def look_for_song_data_in_statuses_to_insert(self, messages):
+        logging.info("Look for song data in mastodon statuses to insert")
+        if messages is None:
+            return
+
+        song_id_counter = len(self.songs_data) + 1
+        for message in messages:
+            if "song-data" in message:
+                [title, genre, artist, tempo, duration] = self.extra_song_data_from_status_content(message)
+                if title is not None:
+                    self.insert_song_data(song_id_counter, title, genre, artist, tempo, duration)
+                    song_id_counter = song_id_counter + 1
+
+    def extra_song_data_from_status_content(self, text):
+        # Find the index of "song-data:"
+        model_link_index = text.find("song-data:")
+
+        if model_link_index == -1:
+            return ""
+
+        # Extract the substring after "song-data:"
+        result = text[model_link_index + len("song-data:") + 1:]
+
+        # Find the index of the first whitespace character
+        whitespace_index = result.find(" ")
+
+        if whitespace_index != -1:
+            result = result[:whitespace_index]
+            if self.is_json(result):
+                return json.loads(result)
+            else:
+                return [None, None, None, None, None]
+        else:
+            return [None, None, None, None, None]
 
     def save_model(self, model_name, model):
         self.insert_model_state(model_name, model.get_state())
@@ -253,9 +284,17 @@ class RDFKnowledgeGraph:
 
     def on_found_group_to_join(self, link_to_model):
         self.mastodon_client.post_status("[FUNGUS] model-link: " + str(link_to_model) + " #" + self.mastodon_client.nutrial_tag)
+        self.fetch_all_songs()
         if link_to_model is not None:
             found_initial_team = True
             self.fuseki_url = link_to_model
         else:
             # default to fuseki server
             self.fuseki_url = os.getenv("FUSEKI_SERVER_URL")
+
+    def is_json(self, myjson):
+      try:
+        json.loads(myjson)
+      except ValueError as e:
+        return False
+      return True
