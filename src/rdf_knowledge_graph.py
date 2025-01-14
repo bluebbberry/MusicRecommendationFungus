@@ -1,6 +1,5 @@
 # rdf_knowledge_graph.py
-import requests
-from rdflib import Graph, Namespace, Literal
+from rdflib import Graph, Namespace
 import logging
 from SPARQLWrapper import SPARQLWrapper, JSON
 import json
@@ -8,11 +7,11 @@ import base64
 import torch
 import os
 from dotenv import load_dotenv
-load_dotenv()
 import csv
 import pandas as pd
 import random
 
+load_dotenv()
 logging.basicConfig(level=logging.INFO)
 
 class RDFKnowledgeGraph:

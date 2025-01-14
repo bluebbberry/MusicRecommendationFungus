@@ -1,3 +1,4 @@
+# main.yp
 import time
 import logging
 import os
@@ -5,11 +6,9 @@ from rdf_knowledge_graph import RDFKnowledgeGraph
 from mastodon_client import MastodonClient
 import datetime
 import random
-
 from machine_learning_service import MLService
-
-# Load environment variables
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Configure logging

@@ -1,3 +1,4 @@
+# machine_learning_service.py
 import logging
 import torch
 import torch.nn as nn
@@ -8,7 +9,6 @@ from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
 
 load_dotenv()
-
 
 class MLService:
     def __init__(self, rdf_knowledge_graph, user_ratings_csv=None, num_epochs=100, hidden_dim=64, lr=0.001):
