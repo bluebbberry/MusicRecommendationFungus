@@ -1,3 +1,4 @@
+# main.yp
 import time
 import logging
 import os
@@ -5,13 +6,9 @@ from rdf_knowledge_graph import RDFKnowledgeGraph
 from mastodon_client import MastodonClient
 import datetime
 import random
-import json
-
-from song_recommend_service import SongRecommendService
-import re
-
-# Load environment variables
+from machine_learning_service import MLService
 from dotenv import load_dotenv
+
 load_dotenv()
 
 # Configure logging
@@ -25,11 +22,9 @@ class MusicRecommendationFungus:
         logging.info("[INIT] Initializing Music Recommendation instance")
         self.mastodon_client = MastodonClient()
         self.knowledge_graph = RDFKnowledgeGraph(mastodon_client=self.mastodon_client)
-        self.knowledge_graph.insert_gradient(2)
-        self.knowledge_graph.retrieve_all_gradients(None)
         self.knowledge_graph.insert_songs_from_csv('songs.csv')
-        self.song_recommendation_service = SongRecommendService(self.knowledge_graph, user_ratings_csv='user_ratings.csv')
-        self.knowledge_graph.insert_model_state("my-model", self.song_recommendation_service.model.get_state())
+        self.machine_learning_service = MLService(self.knowledge_graph, user_ratings_csv='user_ratings.csv')
+        self.knowledge_graph.insert_model_state("my-model", self.machine_learning_service.model.get_state())
         self.feedback_threshold = float(os.getenv("FEEDBACK_THRESHOLD", 0.5))
         logging.info(f"[CONFIG] Feedback threshold set to {self.feedback_threshold}")
 
@@ -53,9 +48,9 @@ class MusicRecommendationFungus:
                     self.train_model()
                     all_models = self.knowledge_graph.fetch_all_model_from_knowledge_base(link_to_model)
                     logging.info(f"Received models from other nodes (size: {len(all_models)})")
-                    aggregated_model_state = self.knowledge_graph.aggregate_model_states(self.song_recommendation_service.model.get_state(), all_models)
+                    aggregated_model_state = self.knowledge_graph.aggregate_model_states(self.machine_learning_service.model.get_state(), all_models)
                     # deploy new model
-                    self.song_recommendation_service.model.set_state(aggregated_model_state)
+                    self.machine_learning_service.model.set_state(aggregated_model_state)
                     logging.info("[SAVING] Deployed aggregated model as new model")
 
                 feedback = self.answer_user_feedback()
@@ -75,8 +70,8 @@ class MusicRecommendationFungus:
     def train_model(self):
         try:
             logging.info("[TRAINING] Starting model training")
-            self.song_recommendation_service.train_model()
-            model = self.song_recommendation_service.model
+            self.machine_learning_service.train_model()
+            model = self.machine_learning_service.model
             logging.info(f"[RESULT] Model trained successfully.")
             self.knowledge_graph.save_model("my-model", model)
             logging.info("[STORE] Model saved to RDF Knowledge Graph")
@@ -96,7 +91,7 @@ class MusicRecommendationFungus:
         fresh_statuses = filter(lambda s: s["id"] not in self.mastodon_client.ids_of_replied_statuses, statuses)
         for status in fresh_statuses:
             if "[FUNGUS]" not in status['content']:
-                song_titles = self.song_recommendation_service.get_song_recommendations(self.song_recommendation_service.extract_song_from_string(status['content']), 3)
+                song_titles = self.machine_learning_service.get_song_recommendations(self.machine_learning_service.extract_song_from_string(status['content']), 3)
                 self.mastodon_client.reply_to_status(status['id'], status['account']['username'], "[FUNGUS] " + str(song_titles))
         # count feedback
         num_of_statuses_send = len(self.mastodon_client.ids_of_replied_statuses)
