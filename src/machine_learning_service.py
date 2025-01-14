@@ -108,33 +108,33 @@ class MLService:
                 print(f'Epoch [{epoch + 1}/{self.num_epochs}], Loss: {loss.item():.4f}')
 
     def get_song_recommendations(self, title, top_n=5):
-        """Recommend the top N songs most similar to a given song."""
+        """Recommend the top N songs using the model's output for similarity calculation."""
         self.model.eval()  # Set the model to evaluation mode
 
-        # Get the index of the song based on song_id
-        song_titlex = self.songs_data[self.songs_data['title'] == title].index[0]
+        # Get the index of the song based on the title
+        song_index = self.songs_data[self.songs_data['title'] == title].index[0]
 
-        # Get the features of the given song
-        song_features = torch.tensor(self.features_encoded.iloc[song_titlex].values, dtype=torch.float32).unsqueeze(0)
+        # Convert song features into tensor for the model
+        song_features = torch.tensor(self.features_encoded.iloc[song_index].values, dtype=torch.float32).unsqueeze(0)
 
-        # Predict the rating for the song (not used for content-based filtering directly)
+        # Generate the model's latent representation for the given song
         with torch.no_grad():
-            predicted_rating = self.model(song_features).item()
+            song_embedding = self.model(song_features).squeeze(0)  # Use the model's output
 
-        # Get the predicted ratings for all songs
+        # Generate the model's latent representation for all songs
         all_song_features = torch.tensor(self.features_encoded.values, dtype=torch.float32)
         with torch.no_grad():
-            all_song_predictions = self.model(all_song_features).squeeze()
+            all_song_embeddings = self.model(all_song_features)  # Model-generated embeddings
 
-        # Use content-based filtering (cosine similarity) to find similar songs
-        song_feature_array = self.features_encoded.values
-        similarity_matrix = cosine_similarity(song_feature_array)
-        song_index = self.songs_data[self.songs_data['title'] == title].index[0]
-        similarities = similarity_matrix[song_index]
+        # Compute cosine similarity between the selected song and all other songs using embeddings
+        song_embedding = song_embedding.numpy().reshape(1, -1)
+        all_song_embeddings = all_song_embeddings.numpy()
+        similarity_matrix = cosine_similarity(song_embedding, all_song_embeddings).flatten()
 
-        # Sort songs based on cosine similarity (excluding the song itself)
-        similar_songs_idx = similarities.argsort()[::-1][1:top_n + 1]
+        # Sort songs based on similarity (excluding the song itself)
+        similar_songs_idx = similarity_matrix.argsort()[::-1][1:top_n + 1]
 
+        # Retrieve recommended song titles
         recommended_song_ids = self.songs_data.iloc[similar_songs_idx]['title'].values
 
         return recommended_song_ids

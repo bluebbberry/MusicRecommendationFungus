@@ -58,7 +58,7 @@ class RDFKnowledgeGraph:
         state_dict = {k: v.tolist() for k, v in model_state.items()}
         state_json = json.dumps(state_dict)
         state_encoded = base64.b64encode(state_json.encode('utf-8')).decode('utf-8')
-        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql = SPARQLWrapper(self.update_url)
         sparql_insert_query = f'''
         PREFIX ex: <http://example.org/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
