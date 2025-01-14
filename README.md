@@ -1,6 +1,6 @@
 # MusicRecommendationFungus
 
-This project simulates federated learning with interactions across an RDF Knowledge Graph and Mastodon. The idea: train a model while collaborating with other agents and posting updates to Mastodon.
+This project realizes community-driven song-recommendation in a decentralized manner based on RDF Knowledge-Graph, Mastodon and decentralized federated learning. The idea: train a model on your local machine while collaborating with your friends and then use the model together through bots.
 
 ## Requirements
 
@@ -33,55 +33,26 @@ pip install -r requirements.txt
 
 ### 3. Configure
 
-- **RDF Knowledge Graph**: Make sure your Fuseki server is running and update the URLs in the code (e.g., `FUSEKI_SERVER`, `FUSEKI_QUERY`).
-- **Mastodon API**: Create a Mastodon API token and set the Mastodon URL in the code (`your_mastodon_api_token`, `https://mastodon.social`).
+- **RDF Knowledge Graph**: Make sure your Fuseki server is running and update the URLs in the .env-file (e.g., `FUSEKI_SERVER_URL`).
+- **Mastodon API**: Create a Mastodon API token and setup the connection in the .env-file (`MASTODON_API_KEY`, `MASTODON_INSTANCE_URL`, `ACCOUNT_NAME`).
 
 ### 4. Run
 
-To start everything:
+To start everything, run in the `/src`-folder:
 
 ```bash
 python main.py
 ```
 
 The system will:
-1. Train the model every minute.
+1. Train the model every five seconds.
 2. Post updates to Mastodon.
 3. Respond to Mastodon requests (e.g., for predictions).
-4. Share gradients and aggregate other groups' models using the RDF graph.
+4. Share gradients and aggregate other groups' models using the RDF graph to potentially switch groups.
 
-### 5. Play
+### 5. Interaction with the bot!
 
-Now your system is running, and you can interact with it on Mastodon using `#babyfungus`. You can post prediction requests, and the system will respond.
-
-## Code Overview
-
-### 1. **RDF Knowledge Graph (`rdf_knowledge_graph.py`)**
-   - Handles communication with Fuseki (saves weights, shares gradients, aggregates data).
-
-### 2. **Federated Learning (`federated_learning.py`)**
-   - Trains a simple model (gradient descent), shares gradients, aggregates, posts to Mastodon.
-
-### 3. **Mastodon API (`mastodon_api.py`)**
-   - Posts updates, fetches and processes requests with `#babyfungus` hashtag.
-
-### 4. **Performance Comparison (`performance_comparison.py`)**
-   - Compares your model's performance with others by fetching weights from the RDF graph. If another model performs better, it "switches groups".
-
-### 5. **Main Program (`main.py`)**
-   - Starts threads for training and Mastodon interaction.
-
-## Troubleshooting
-
-1. **RDF Issues**: Ensure Fuseki server is up and endpoints are correct.
-2. **Mastodon Issues**: Check the API token and Mastodon URL.
-3. **Missing Packages**: If something's missing, run `pip install -r requirements.txt`.
-
-## Improvements
-
-- **Complex Models**: Swap the simple model with something more interesting (e.g., neural networks).
-- **Error Handling**: More error catching for API failures, network issues.
-- **Scale Up**: Add more agents for federated learning.
+Now your system is running, and you can interact with it on Mastodon by posting to `#babyfungus`. Ask for recommendations to a song you like and the system will respond.
 
 ## License
 
