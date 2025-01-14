@@ -37,7 +37,9 @@ class MusicRecommendationFungus:
             try:
                 if switch_team or not found_initial_team:
                     logging.info("[CHECK] Searching for a new fungus group")
-                    link_to_model = self.knowledge_graph.look_for_new_fungus_group()
+                    messages, random_mycelial_tag = self.mastodon_client.get_statuses_from_random_mycelial_tag()
+                    link_to_model = self.knowledge_graph.look_for_new_fungus_group_in_statuses(messages, random_mycelial_tag)
+                    self.knowledge_graph.look_for_song_data_in_statuses_to_insert(messages)
                     self.knowledge_graph.on_found_group_to_join(link_to_model)
                 else:
                     logging.info("[WAIT] No new groups found.")
@@ -60,8 +62,8 @@ class MusicRecommendationFungus:
 
                 self.evolve_behavior(feedback)
 
-                logging.info("[SLEEP] Sleeping for 5 seconds")
-                time.sleep(5)
+                logging.info("[SLEEP] Sleeping for 20 seconds")
+                time.sleep(20)
                 i = i + 1
             except Exception as e:
                 logging.error(f"[ERROR] An error occurred: {e}", exc_info=True)

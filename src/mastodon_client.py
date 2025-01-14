@@ -3,6 +3,7 @@ import requests
 import os
 import logging
 from dotenv import load_dotenv
+import random
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -61,6 +62,18 @@ class MastodonClient:
         else:
             logging.error(f"Error: {response.status_code}")
             return None
+
+    def get_statuses_from_random_mycelial_tag(self):
+        messages = []
+        random_mycelial_tag = random.choice(os.getenv("MYCELIAL_TAG").split(";"))
+        statuses = self.fetch_latest_statuses(None, random_mycelial_tag)
+        for status in statuses:
+            messages.append(status["content"])
+        if not messages:
+            logging.warning("No messages found under the nutrial hashtag. Trying again later...")
+            return None, random_mycelial_tag
+        else:
+            return messages, random_mycelial_tag
 
     def count_likes_of_all_statuses(self):
         overall_likes = 0

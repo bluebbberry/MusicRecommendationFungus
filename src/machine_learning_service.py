@@ -14,7 +14,6 @@ class MLService:
     def __init__(self, rdf_knowledge_graph, user_ratings_csv=None, num_epochs=100, hidden_dim=64, lr=0.001):
         # Load song data from knowledge base
         self.rdf_knowledge_graph = rdf_knowledge_graph
-        self.songs_data = self.rdf_knowledge_graph.get_all_songs()
 
         # If user ratings are provided (optional), load the data
         self.user_ratings_data = pd.read_csv(user_ratings_csv) if user_ratings_csv else None
@@ -60,7 +59,7 @@ class MLService:
     def preprocess_data(self):
         """Preprocess the song data (encoding categorical features and scaling numerical ones)."""
         # Extract features (Assuming 'genre', 'artist', 'tempo', 'duration' are available in the dataset)
-        features = self.songs_data[['genre', 'artist', 'tempo', 'duration']]
+        features = self.rdf_knowledge_graph.songs_data[['genre', 'artist', 'tempo', 'duration']]
 
         # One-hot encode categorical features (genre, artist)
         features_encoded = pd.get_dummies(features, columns=['genre', 'artist'], drop_first=True)
@@ -76,7 +75,7 @@ class MLService:
         features_encoded = features_encoded.astype('float32')
 
         # Get song ids for later use
-        song_ids = self.songs_data['song_id'].values
+        song_ids = self.rdf_knowledge_graph.songs_data['song_id'].values
 
         return features_encoded, song_ids
 
@@ -112,7 +111,7 @@ class MLService:
         self.model.eval()  # Set the model to evaluation mode
 
         # Get the index of the song based on the title
-        song_index = self.songs_data[self.songs_data['title'] == title].index[0]
+        song_index = self.rdf_knowledge_graph.songs_data[self.rdf_knowledge_graph.songs_data['title'] == title].index[0]
 
         # Convert song features into tensor for the model
         song_features = torch.tensor(self.features_encoded.iloc[song_index].values, dtype=torch.float32).unsqueeze(0)
@@ -135,7 +134,7 @@ class MLService:
         similar_songs_idx = similarity_matrix.argsort()[::-1][1:top_n + 1]
 
         # Retrieve recommended song titles
-        recommended_song_ids = self.songs_data.iloc[similar_songs_idx]['title'].values
+        recommended_song_ids = self.rdf_knowledge_graph.songs_data.iloc[similar_songs_idx]['title'].values
 
         return recommended_song_ids
 
@@ -161,8 +160,9 @@ class MLService:
         return recommended_songs[:top_n]
 
     def extract_song_from_string(self, text):
+        logging.info(text)
         # Check each title against the provided string
-        for title in self.songs_data['title']:
+        for title in self.rdf_knowledge_graph.songs_data['title']:
             if title.lower() in text.lower():
                 logging.info("[USER REQUEST] Song: {}".format(title))
                 return title
