@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-class SongRecommendService:
+class MLService:
     def __init__(self, rdf_knowledge_graph, user_ratings_csv=None, num_epochs=100, hidden_dim=64, lr=0.001):
         # Load song data from knowledge base
         self.rdf_knowledge_graph = rdf_knowledge_graph
@@ -30,15 +30,15 @@ class SongRecommendService:
         self.lr = lr
 
         # Initialize the neural network model
-        self.model = self.ContentBasedModel(self.input_dim, self.hidden_dim, self.output_dim)
+        self.model = self.ContentBasedNeuralNetwork(self.input_dim, self.hidden_dim, self.output_dim)
 
         # Loss function and optimizer
         self.criterion = nn.MSELoss()
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
-    class ContentBasedModel(nn.Module):
+    class ContentBasedNeuralNetwork(nn.Module):
         def __init__(self, input_dim, hidden_dim, output_dim):
-            super(SongRecommendService.ContentBasedModel, self).__init__()
+            super(MLService.ContentBasedNeuralNetwork, self).__init__()
             self.fc1 = nn.Linear(input_dim, hidden_dim)
             self.fc2 = nn.Linear(hidden_dim, output_dim)
             self.relu = nn.ReLU()
