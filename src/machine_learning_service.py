@@ -160,6 +160,7 @@ class MLService:
         return recommended_songs[:top_n]
 
     def extract_song_from_string(self, text):
+        logging.info(text)
         # Check each title against the provided string
         for title in self.rdf_knowledge_graph.songs_data['title']:
             if title.lower() in text.lower():
