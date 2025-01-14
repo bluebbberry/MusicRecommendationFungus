@@ -163,7 +163,7 @@ class RDFKnowledgeGraph:
         """
         Retrieves all model parameters stored in the Fuseki server and decodes them.
         """
-        sparql = SPARQLWrapper(self.fuseki_url)
+        sparql = SPARQLWrapper(self.query_url)
         sparql_select_query = '''
         PREFIX ex: <http://example.org/>
         PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
