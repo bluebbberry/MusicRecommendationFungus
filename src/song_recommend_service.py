@@ -5,10 +5,7 @@ import torch.optim as optim
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.model_selection import train_test_split
-import json
 from dotenv import load_dotenv
-from rdf_knowledge_graph import RDFKnowledgeGraph
 
 load_dotenv()
 

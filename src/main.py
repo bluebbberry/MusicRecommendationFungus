@@ -5,10 +5,8 @@ from rdf_knowledge_graph import RDFKnowledgeGraph
 from mastodon_client import MastodonClient
 import datetime
 import random
-import json
 
 from song_recommend_service import SongRecommendService
-import re
 
 # Load environment variables
 from dotenv import load_dotenv
