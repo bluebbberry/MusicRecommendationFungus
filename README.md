@@ -2,6 +2,8 @@
 
 This project realizes community-driven song-recommendation in a decentralized manner based on RDF Knowledge-Graph, Mastodon and decentralized federated learning. The idea: train a model on your local machine while collaborating with your friends and then use the model together through bots.
 
+For background-information about the project's mission statement, see the [Wiki](https://github.com/bluebbberry/MusicRecommendationFungus/wiki).
+
 ## Requirements
 
 - Python 3.8+
